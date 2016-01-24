@@ -23,11 +23,11 @@ import com.baidu.trace.Trace;
  * Version:
  */
 public class LocationService extends Service implements BDLocationListener {
-  public LocationClient mLocationClient = null;
 
   private String LogTag = "DriverGps";
 
   private long traceServiceId = 109298;
+  private LocationClient mLocationClient = null;
 
   private LBSTraceClient client = null;
 
@@ -38,16 +38,18 @@ public class LocationService extends Service implements BDLocationListener {
   private Trace trace;
 
   @Override public int onStartCommand(Intent intent, int flags, int startId) {
-    Notification notification = new Notification();
     PendingIntent pendingIntent = PendingIntent.getService(this, 0, intent, 0);
     Notification.Builder builder = new Notification.Builder(getApplicationContext());
-    //builder.setLargeIcon(BitmapFactory.decodeResource(getResources(),R.drawable.));
-    if (mLocationClient == null) {
-      mLocationClient = new LocationClient(getApplicationContext());
-      mLocationClient.registerLocationListener(this);
-      initLocation();
-      mLocationClient.requestNotifyLocation();
-    }
+    builder.setSmallIcon(R.mipmap.ic_launcher, 0);
+    builder.setContentText("一嗨司机测试程序");
+    builder.setContentTitle("一嗨租车");
+    builder.setPriority(Notification.PRIORITY_HIGH);
+    builder.setContentIntent(pendingIntent);
+    startForeground(11, builder.build());
+    mLocationClient = DriverAppcation.getApplication().getLocationClient();
+    mLocationClient.registerLocationListener(this);
+    mLocationClient.start();
+
     if (client == null) {
       //实例化轨迹服务客户端
       client = new LBSTraceClient(getApplicationContext());
@@ -60,61 +62,7 @@ public class LocationService extends Service implements BDLocationListener {
     mLocationClient.stop();
     stopSrace();
     mLocationClient.unRegisterLocationListener(this);
-    //stopForeground(true);
-  }
-
-  @Override public void onReceiveLocation(BDLocation location) {
-    StringBuffer sb = new StringBuffer();
-    if (location.getLocType() == BDLocation.TypeGpsLocation) {// GPS定位结果
-      sb.append("\nspeed : ");
-      sb.append(location.getSpeed());// 单位：公里每小时
-      sb.append("\nsatellite : ");
-      sb.append(location.getSatelliteNumber());
-      sb.append("\nheight : ");
-      sb.append(location.getAltitude());// 单位：米
-      sb.append("\ndirection : ");
-      sb.append(location.getDirection());// 单位度
-      sb.append("\naddr : ");
-      sb.append(location.getAddrStr());
-      sb.append("\ndescribe : ");
-      sb.append("gps定位成功");
-    } else if (location.getLocType() == BDLocation.TypeNetWorkLocation) {// 网络定位结果
-      sb.append("\naddr : ");
-      sb.append(location.getAddrStr());
-      //运营商信息
-      sb.append("\noperationers : ");
-      sb.append(location.getOperators());
-      sb.append("\ndescribe : ");
-      sb.append("网络定位成功");
-    }
-    Logger(sb.toString());
-  }
-
-  /**
-   * 百度定位
-   *
-   * 高精度定位模式：这种定位模式下，会同时使用网络定位和GPS定位，优先返回最高精度的定位结果；
-   * 低功耗定位模式：这种定位模式下，不会使用GPS，只会使用网络定位（Wi-Fi和基站定位）；
-   * 仅用设备定位模式：这种定位模式下，不需要连接网络，只使用GPS进行定位，这种模式下不支持室内环境的定位。
-   */
-  private void initLocation() {
-    LocationClientOption option = new LocationClientOption();
-    option.setLocationMode(
-        LocationClientOption.LocationMode.Hight_Accuracy);//可选，默认高精度，设置定位模式，高精度，低功耗，仅设备
-    option.setCoorType("bd09ll");//可选，默认gcj02，设置返回的定位结果坐标系
-    int span = 5000;
-    option.setScanSpan(span);//可选，默认0，即仅定位一次，设置发起定位请求的间隔需要大于等于1000ms才是有效的
-    option.setIsNeedAddress(true);//可选，设置是否需要地址信息，默认不需要
-    option.setOpenGps(true);//可选，默认false,设置是否使用gps
-    option.setLocationNotify(true);//可选，默认false，设置是否当gps有效时按照1S1次频率输出GPS结果
-    option.setIsNeedLocationDescribe(
-        true);//可选，默认false，设置是否需要位置语义化结果，可以在BDLocation.getLocationDescribe里得到，结果类似于“在北京天安门附近”
-    option.setIsNeedLocationPoiList(true);//可选，默认false，设置是否需要POI结果，可以在BDLocation.getPoiList里得到
-    option.setIgnoreKillProcess(
-        true);//可选，默认true，定位SDK内部是一个SERVICE，并放到了独立进程，设置是否在stop的时候杀死这个进程，默认不杀死
-    option.SetIgnoreCacheException(false);//可选，默认false，设置是否收集CRASH信息，默认收集
-    option.setEnableSimulateGps(false);//可选，默认false，设置是否需要过滤gps仿真结果，默认需要
-    mLocationClient.setLocOption(option);
+    stopForeground(true);
   }
 
   private void Logger(Object o) {
@@ -145,6 +93,34 @@ public class LocationService extends Service implements BDLocationListener {
     };
     //开启轨迹服务
     client.startTrace(trace, startTraceListener);
+  }
+
+  @Override public void onReceiveLocation(BDLocation location) {
+    StringBuffer sb = new StringBuffer();
+    if (location.getLocType() == BDLocation.TypeGpsLocation) {// GPS定位结果
+      sb.append("speed : ");
+      sb.append(location.getSpeed());// 单位：公里每小时
+      sb.append("satellite : ");
+      sb.append(location.getSatelliteNumber());
+      sb.append("height : ");
+      sb.append(location.getAltitude());// 单位：米
+      sb.append("direction : ");
+      sb.append(location.getDirection());// 单位度
+      sb.append("addr : ");
+      sb.append(location.getAddrStr());
+      sb.append("describe : ");
+      sb.append("gps定位成功");
+    } else if (location.getLocType() == BDLocation.TypeNetWorkLocation) {// 网络定位结果
+      sb.append("addr : ");
+      sb.append(location.getAddrStr());
+      //运营商信息
+      sb.append("operationers : ");
+      sb.append(location.getOperators());
+      sb.append("describe : ");
+      sb.append("网络定位成功");
+    }
+    sb.append(location.getLocType());
+    Logger(sb.toString());
   }
 
   private void stopSrace() {
